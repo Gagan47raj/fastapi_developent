@@ -1,5 +1,7 @@
 
 
+from typing import Optional
+
 from app.core.collections import student_collection
 
 # inserting data in database
@@ -43,4 +45,71 @@ async def get_one_student(id):
     #create respective router 
     #return response body student_response
     return student
+
+
+async def update_student(id, student_update):
+
+    await student_collection.update_one(
+        {
+            "_id" : ObjectId(id)
+        },
+
+        {
+            "$set" : student_update.model_dump()
+        }
+    )
+
+    return student_update
+
+
+async def delete_student(id):
+
+    await student_collection.delete_one(
+        {
+            "_id" : ObjectId(id)
+        }
+    )
+
+async def get_filterd_student_list(
+        department : Optional[str] = None,
+        rollno : Optional[int] = None,
+        min_cgpa : Optional[float] = None,
+        max_cgpa : Optional[float] = None,
+        name : Optional[str] = None
+):
+    query = {}
+
+    #department
+    if department:
+        query["department"] = {"$regex" : department, "$options" : "i"}
+    
+    #cgpa
+    if min_cgpa is not None or max_cgpa is not None:
+
+        query["cgpa"] = {}
+
+        if min_cgpa is not None:
+            query["cgpa"]["$gte"] = min_cgpa
+
+        if max_cgpa is not None:
+            query["cgpa"]["$lte"] = max_cgpa
+    
+    #roll no
+    if rollno is not None:
+        query["rollno"] = {"$regex" : rollno, "$options" : "i"}
+
+    #name
+    if name is not None:
+        query["name"] = {"$regex" : name, "$options" : "i"}
+
+    students=[]
+
+    async for student in student_collection.find(query):
+        student["_id"] = str(student["_id"])
+        students.append(student)
+
+    return students
+
+
+
 
